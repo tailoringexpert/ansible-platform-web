@@ -1,0 +1,21 @@
+---
+webserver:
+  name: "{{ web_servername }}"
+  documentRoot: "{{ web_documentRoot }}"
+  log: "{{ web_log }}"
+  sslHome: "{{ web_ssl }}"
+  sslCertificateFile: "{{ web_sslCertificateFile }}"
+  sslCertificateKeyFile: "{{ web_sslCertificateKeyFile }}"
+  vhost: "{{ web_vhost }}" 
+  conf: "{{ web_conf }}"
+  http: "{{ web_http }}"
+  https: "{{web_https }}"
+  alias: []
+  reverse_proxies:
+    - from: "/api"
+      to: "{{ app_protocol }}://{{ app_server }}:{{ app_serverport }}/api"
+
+web:
+  src: "{{ web_version }}/tailoringexpert-web-{{ web_version }}{{web_snapshot}}-distribution.zip"
+  dest: "{{ web_documentRoot }}"
+  remote_src: no            

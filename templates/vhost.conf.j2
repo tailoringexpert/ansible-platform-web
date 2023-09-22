@@ -1,0 +1,74 @@
+# {{ ansible_managed }}
+DirectoryIndex index.php index.html
+{% if web_basic_auth_ldap is defined and web_basic_auth_ldap %}
+
+LDAPTrustedMode SSL
+LDAPVerifyServerCert Off
+{% endif %}
+
+<VirtualHost *:{{ webserver.http }}>
+  ServerName {{ webserver.name }} 
+  Redirect permanent / https://{{ webserver.name }}
+</VirtualHost>
+
+<VirtualHost *:{{ webserver.https }}>
+  ServerName {{ webserver.name }}
+  DocumentRoot "{{ webserver.documentRoot }}"
+
+  SSLEngine on
+  SSLProtocol all -SSLv3 -TLSv1 -TLSv1.1
+  SSLCipherSuite ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-SHA384:ECDHE-RSA-AES256-SHA384:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA256
+  SSLHonorCipherOrder on
+  SSLCompression      off
+  SSLSessionTickets   off
+
+  {% if webserver.sslHome | length > 0 %}	
+  SSLCertificateFile {{ webserver.sslHome }}/{{ webserver.sslCertificateFile | basename }}
+  SSLCertificateKeyFile {{ webserver.sslHome }}/{{ webserver.sslCertificateKeyFile | basename }}
+  {% endif %}
+ 
+ 
+  <Directory "{{ webserver.documentRoot }}">
+     Options Indexes FollowSymLinks
+     AllowOverride All
+{% if web_basic_auth_ldap is defined and web_basic_auth_ldap %}
+     AuthType Basic
+     AuthName "Tailoringexpert"
+     AuthBasicProvider ldap
+     AuthUserFile /dev/null
+     AuthLDAPURL {{ web_basic_auth_ldap.AuthLDAPURL }}
+     AuthLDAPBindDN {{ web_basic_auth_ldap.AuthLDAPBindDN }}
+     AuthLDAPBindPassword {{ web_basic_auth_ldap.AuthLDAPBindPassword }}
+     Require {{web_basic_auth_ldap.Require }}
+{% elif web_basic_auth_htpasswd is defined and web_basic_auth_htpasswd %}
+     AuthType Basic
+     AuthName "Tailoringexpert"
+     AuthUserFile {{ webserver.vhost }}/.tailoringexpertpasswd
+     Require valid-user
+{% else %}
+     Require all granted
+{% endif %}	 
+  </Directory>
+
+  ErrorLog {{ webserver.log }}/error.log
+  CustomLog {{ webserver.log }}/access_log combined
+  
+  SSLProxyEngine on
+  SSLProxyCheckPeerCN off
+  RequestHeader set X-Forwarded-Proto https
+
+{% for proxy in webserver.reverse_proxies %}  
+  ProxyPass "{{ proxy.from }}"  "{{ proxy.to }}"
+  ProxyPassReverse "{{ proxy.from }}"  "{{ proxy.to }}"
+{% endfor %} 
+
+{% for alias in webserver.alias %}
+  Alias "{{ alias.from }}"  "{{ alias.to }}"
+  <Directory "{{ alias.to }}">
+     Options Indexes FollowSymLinks Includes ExecCGI
+	 AllowOverride All
+	 Require all granted
+  </Directory>
+{% endfor %}
+
+</VirtualHost>
