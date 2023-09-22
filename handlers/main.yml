@@ -1,0 +1,7 @@
+---
+- name: restart web
+  service: 
+    name: apache2
+    state: restarted
+  become: true
+  remote_user: "{{ sudo_user }}"

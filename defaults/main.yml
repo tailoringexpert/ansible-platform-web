@@ -1,0 +1,40 @@
+---
+user: tailoringexpert
+group: tailoringexpert
+
+web_http: 80
+web_https: 443
+
+web_home: /app
+web_documentRoot: "{{ web_home }}/www"
+web_asset: "{{ web_documentRoot }}/assets"
+web_static: "{{ web_documentRoot }}/static"
+web_log: "{{ web_home }}/logs"
+web_ssl: "{{ web_home }}/certs"
+web_conf: "{{ web_home }}/sites"
+web_vhost: "{{ web_home }}/sites"
+web_sslCertificateFile: "{{ inventory_hostname | lower}}/{{ ansible_host }}.crt"
+web_sslCertificateKeyFile: "{{ inventory_hostname | lower}}/{{ ansible_host }}.key"
+web_servername: "{{ inventory_hostname }}"
+ 
+# in case to symlink "versioned" web root dir 
+#web_current: "{{ home }}/web"
+# if platform is runnning without any system that can provide and add a tenant to request header
+#web_tenant_id: demo
+ 
+#web_version: 0.0.7
+#web_snapshot: ""
+app_server: localhost
+app_protocol: http
+app_serverport: 8080
+
+
+web_directories: [ 
+  "{{ web_home }}",
+  "{{ web_ssl }}",
+  "{{ web_log }}",
+  "{{ web_asset }}",
+  "{{ web_static }}",
+  "{{ web_conf }}",
+  "{{ web_vhost }}"
+]  

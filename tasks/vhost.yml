@@ -1,0 +1,68 @@
+---
+- name: Install web frontend
+  unarchive:
+    src: "{{ web.src }}"
+    dest: "{{ web.dest }}"
+    remote_src: "{{ web.remote_src }}"
+
+- name: Symlink current version
+  file: 
+    src: "{{ web_home }}"
+    dest: "{{ web_current }}"
+    state: link
+    owner: "{{ user }}"
+    group: "{{ group }}"
+  when: web_current is defined
+
+- name: Set tenant in web
+  replace:
+    path: "{{ web.dest }}/index.html"
+    regexp: '(// CONFIGURATIONS_PLACEHOLDER)'
+    replace: 'window.configs = { "VUE_APP_TENANT":"{{ web_tenant_id }}" }'
+    backup: no
+  when: web_tenant_id is defined   
+   
+- name: Install SSL certificate
+  copy:
+    src: "{{ item }}"
+    dest:  "{{ web_ssl }}"
+    remote_src: no
+  loop:
+    - "{{ webserver.sslCertificateFile }}"
+    - "{{ webserver.sslCertificateKeyFile }}"
+  when: 
+    - webserver.sslCertificateFile | length > 0 
+    - webserver.sslCertificateKeyFile | length > 0
+          
+- name: Add users to .tailoringexpertpasswd
+  htpasswd:
+    path: "{{ webserver.vhost }}/.tailoringexpertpasswd"
+    name: "{{ auth.name }}"
+    password: "{{ auth.password }}"
+    mode: 0644
+    owner: "{{ user }}"
+    group: "{{ group }}"    
+  when: web_basic_auth_htpasswd is defined and web_basic_auth_htpasswd|length >  0
+  loop_control:
+    loop_var: auth
+  loop: "{{ web_basic_auth_htpasswd }}"
+  become: true
+  remote_user: "{{ sudo_user }}"
+  
+- name: Create vhost
+  template:
+    src: vhost.conf.j2 
+    dest:  "{{ webserver.conf }}/{{ webserver.name }}.conf"
+    #dest:  "{{ webserver.vhost }}/tailoringexpert-https-vhost.conf"
+    mode: 0640
+    owner: "{{ user }}"
+    group: "{{ group }}"
+
+- name: Enable site
+  file:
+    src: "{{ webserver.conf }}/{{ webserver.name }}.conf"
+    dest: "/etc/apache2/sites-enabled/tailoringexpert-https-vhost.conf"
+    state: link  
+  become: true 
+  remote_user: "{{ sudo_user }}"
+  notify: restart web 
